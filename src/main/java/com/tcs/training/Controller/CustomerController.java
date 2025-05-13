@@ -1,17 +1,20 @@
 package com.tcs.training.Controller;
 
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.tcs.training.Entity.User;
-
 import com.tcs.training.Service.UserService;
 
 @RestController
@@ -22,40 +25,62 @@ public class CustomerController {
     private UserService userService;
     //@Autowired
     //private ProductService productService;
-    @GetMapping("/register")
-    public String showCustomerRegisterPage(Model model) {
-    	 model.addAttribute("error", null);
-        return "customerregister";
-    }
+    
     @PostMapping("/register")
-    public String processCustomerRegister(@RequestParam String username, 
-                                  @RequestParam String password,@RequestParam String confirmpassword,
-                                  Model model) {
+    public ResponseEntity<?> registerUser(@RequestBody Map<String, String> credentials) {
         try {
-            User user = userService.registerCustomer(username, password,confirmpassword);
-            return "customerlogin";
-        } catch (RuntimeException e) {
-            model.addAttribute("error", e.getMessage());
-            return "customerregister";
+            String username = credentials.get("username");
+            String password = credentials.get("password");
+            String confirmPassword = credentials.get("confirmpassword");
+            
+            User user = userService.registerUser(username, password, confirmPassword);
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "User registered successfully");
+            return ResponseEntity.ok(response);
+            
+        } catch (IllegalArgumentException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("status", "error");
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
-    @GetMapping("/login")
-    public String showCustomerLoginPage(Model model) {
-    	 model.addAttribute("error", null);
-        return "customerlogin";
+   
+    @PostMapping("/login")
+    public ResponseEntity<?> loginUser(@RequestBody Map<String, String> credentials) {
+        try {
+            String username = credentials.get("username");
+            String password = credentials.get("password");
+            
+            User user = userService.authenticateCustomer(username, password);
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Login successful");
+            response.put("role", user.getRole());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("status", "error");
+            errorResponse.put("message", e.getMessage());
+            
+            HttpStatus status = HttpStatus.BAD_REQUEST;
+            
+            if (e.getMessage().equals("User not found")) {
+                status = HttpStatus.NOT_FOUND;
+            } else if (e.getMessage().equals("Invalid password")) {
+                status = HttpStatus.UNAUTHORIZED;
+            } else if (e.getMessage().equals("Access denied. Customer account required")) {
+                status = HttpStatus.FORBIDDEN;
+            }
+            
+            return ResponseEntity.status(status).body(errorResponse);
+        }
     }
- //   @PostMapping("/login")
-//    public String processCustomerLogin(@RequestParam String username, 
-//                                  @RequestParam String password,
-//                                  Model model) {
-//        try {
-//            User user = userService.authenticateCustomer(username, password);
-//            return "redirect:/user/dashboard";
-//        } catch (RuntimeException e) {
-//            model.addAttribute("error", e.getMessage());
-//            return "customerlogin";
-//        }
-//    }
 //    @GetMapping("/dashboard")
 //    public String showCustomerDashboard(Model model) {
 //    	 try {

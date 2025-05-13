@@ -26,38 +26,50 @@ public class UserService {
         return user;
     }
 	
-	 public User authenticateCustomer(String username, String password) {
-	        User user = urepo.findByUsername(username)
-	                .orElseThrow(() -> new RuntimeException("User not found"));
-	        
-	        if (!user.getPassword().equals(password)) {
-	            throw new RuntimeException("Invalid password");
-	        }
-	        
-	        if (!"USER".equals(user.getRole())) {
-	            throw new RuntimeException("Access denied. Customer account required");
-	        }
-	        
-	        return user;
+	public User authenticateCustomer(String username, String password) {
+	    // First check if user exists
+	    User user = urepo.findByUsername(username)
+	            .orElseThrow(() -> new RuntimeException("User not found"));
+	    
+	    // Then check password
+	    if (!user.getPassword().equals(password)) {
+	        throw new RuntimeException("Invalid password");
 	    }
-
-	public User registerCustomer(String username, String password, String confirmpassword) {
-		// TODO Auto-generated method stub
-		User user = new User(username,password,"USER");
-		
-        if(urepo.findByUsername(username).isPresent()) {
-        	throw new RuntimeException("UserName Already Exists");
-        }
-        else if (!user.getPassword().equals(confirmpassword)) {
-            throw new RuntimeException("Password does not matches");
-        }else {
-        	urepo.save(user);
-    		
-        }
-        
-        
-        return user;
+	    
+	    // Finally check role
+	    if (!"USER".equals(user.getRole())) {
+	        throw new RuntimeException("Access denied. Customer account required");
+	    }
+	    
+	    return user;
 	}
+
+	 public User registerUser(String username, String password, String confirmPassword) {
+	        // Validate input
+	        if (username == null || username.trim().isEmpty()) {
+	            throw new IllegalArgumentException("Username cannot be empty");
+	        }
+	        
+	        if (password == null || password.trim().isEmpty()) {
+	            throw new IllegalArgumentException("Password cannot be empty");
+	        }
+	        
+	        if (!password.equals(confirmPassword)) {
+	            throw new IllegalArgumentException("Passwords do not match");
+	        }
+	        
+	        if (urepo.findByUsername(username).isPresent()) {
+	            throw new IllegalArgumentException("Username already exists");
+	        }
+	        
+	        // Create and save user
+	        User user = new User();
+	        user.setUsername(username);
+	        user.setPassword(password);
+	        user.setRole("USER");
+	        
+	        return urepo.save(user);
+	    }
 		
 	
 }
